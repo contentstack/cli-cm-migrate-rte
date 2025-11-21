@@ -1,24 +1,15 @@
 /**
- * Test setup file for proper stub and mock cleanup
- * This ensures sinon stubs and nock interceptors are properly restored between tests
+ * Test setup file for proper mock cleanup
+ * This ensures nock interceptors are properly cleaned between tests
+ * Note: sinon cleanup is handled by fancy-test library
  */
 
-const sinon = require('sinon');
 const nock = require('nock');
 
-// Global afterEach to restore all stubs and clean up nock interceptors
+// Global afterEach to clean up nock interceptors
 afterEach(function() {
-  // Restore all sinon stubs/spies/mocks
-  sinon.restore();
-  
   // Clean up all nock interceptors to prevent leakage between tests
   nock.cleanAll();
-});
-
-// Optionally, add a beforeEach for consistency
-beforeEach(function() {
-  // This ensures we start with a clean slate
-  sinon.restore();
 });
 
 module.exports = {
