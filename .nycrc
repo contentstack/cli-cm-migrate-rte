@@ -1,0 +1,17 @@
+{
+  "check-coverage": false,
+  "exclude": [
+    "test/**",
+    "coverage/**",
+    ".nyc_output/**",
+    "node_modules/**",
+    "bin/**"
+  ],
+  "reporter": [
+    "text",
+    "html",
+    "lcov"
+  ],
+  "all": true
+}
+
