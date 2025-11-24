@@ -60,7 +60,7 @@
   "scripts": {
     "postpack": "rm -f oclif.manifest.json",
     "prepack": "oclif manifest && oclif readme",
-    "test": "nyc --silent=false --include=commands --include=lib mocha --forbid-only --exit --timeout 10000 --reporter spec \"test/**/*.test.js\"",
+    "test": "nyc mocha --forbid-only \"test/**/*.test.js\"",
     "version": "oclif readme && git add README.md",
     "clean": "rm -rf ./node_modules tsconfig.build.tsbuildinfo"
   },
