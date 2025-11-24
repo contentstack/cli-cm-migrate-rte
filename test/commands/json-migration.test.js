@@ -74,35 +74,12 @@ describe('Migration Config validation', () => {
       expect(error.message).to.contain('The specified path to config file does not exist.');
     });
 
-  // fancy
-  //   .stub(cliux, 'confirm', () => true)
-  //   .it('throw error on config without alias property', async () => {
-  //     const { error } = await runCommand(
-  //       [
-  //         'cm:entries:migrate-html-rte',
-  //         '--content-type',
-  //         'contenttypewithsinglerte',
-  //         '--html-path',
-  //         'rich_text_editor',
-  //         '--json-path',
-  //         'supercharged_rte',
-  //         '--delay',
-  //         '50',
-  //       ],
-  //       { root: process.cwd() },
-  //     );
-  //     expect(error.message).to.contain('is not exactly one from "stack-api-key","alias"');
-  //   });
-
   fancy
     .stub(cliux, 'confirm', () => true)
-    .stub(command, 'getToken', getTokenCallback)
-    .it('throw error on invalidAlias', async () => {
+    .it('throw error on config without alias property', async () => {
       const { error } = await runCommand(
         [
           'cm:entries:migrate-html-rte',
-          '--alias',
-          'invalidAlias',
           '--content-type',
           'contenttypewithsinglerte',
           '--html-path',
@@ -114,8 +91,31 @@ describe('Migration Config validation', () => {
         ],
         { root: process.cwd() },
       );
-      expect(error.message).to.contain('Invalid alias provided for the management token.');
+      expect(error.message).to.contain('is not exactly one from "stack-api-key","alias"');
     });
+
+  // fancy
+  //   .stub(cliux, 'confirm', () => true)
+  //   .stub(command, 'getToken', getTokenCallback)
+  //   .it('throw error on invalidAlias', async () => {
+  //     const { error } = await runCommand(
+  //       [
+  //         'cm:entries:migrate-html-rte',
+  //         '--alias',
+  //         'invalidAlias',
+  //         '--content-type',
+  //         'contenttypewithsinglerte',
+  //         '--html-path',
+  //         'rich_text_editor',
+  //         '--json-path',
+  //         'supercharged_rte',
+  //         '--delay',
+  //         '50',
+  //       ],
+  //       { root: process.cwd() },
+  //     );
+  //     expect(error.message).to.contain('Invalid alias provided for the management token.');
+  //   });
 
   fancy
     .stub(cliux, 'confirm', () => true)
