@@ -5,6 +5,9 @@
 
 const sinon = require('sinon');
 
+// Set default region for tests to avoid "Region not configured" error
+process.env.CSDX_REGION = 'NA';
+
 // Global afterEach to restore all stubs after each test
 afterEach(function() {
   // Restore all sinon stubs/spies/mocks
