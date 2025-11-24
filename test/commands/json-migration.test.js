@@ -2,7 +2,7 @@ const { runCommand } = require("@oclif/test");
 const sinon = require("sinon");
 const qs = require("querystring");
 const nock = require("nock");
-const { cliux } = require("@contentstack/cli-utilities");
+const { cliux, managementSDKClient } = require("@contentstack/cli-utilities");
 const { expect } = require("chai");
 const { fancy } = require("fancy-test");
 const {
@@ -17,6 +17,126 @@ const {
 const omitDeep = require("omit-deep-lodash");
 const { isEqual, cloneDeep } = require("lodash");
 const { command } = require("../../src/lib/util");
+
+// Helper function to set up common nock mocks for content type and entry operations
+function setupCommonNockMocks(testApiUrl) {
+  nock.cleanAll();
+
+  // Stub cmaAPIUrl
+  sinon.stub(command, "cmaAPIUrl").value(testApiUrl);
+
+  // Mock content type fetch
+  nock(testApiUrl)
+    .persist()
+    .get(/\/v3\/content_types\/[a-zA-Z0-9_]+$/)
+    .query({
+      include_global_field_schema: true,
+    })
+    .reply((uri) => {
+      const match = uri.match(/\/v3\/content_types\/([a-zA-Z0-9_]+)/);
+      return getContentType(match[1]);
+    });
+
+  // Mock entries UID list
+  nock(testApiUrl)
+    .persist()
+    .get(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries/)
+    .query({
+      include_count: true,
+      skip: 0,
+      limit: 100,
+      "only[Base][]": "uid",
+    })
+    .reply(200, (uri) => {
+      const match = uri.match(/\/v3\/content_types\/([a-zA-Z0-9_]+)\/entries/);
+      return getEntriesOnlyUID(match[1]);
+    });
+
+  // Mock entries fetch with locale support
+  nock(testApiUrl)
+    .persist()
+    .get(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries/)
+    .query(true)
+    .reply(200, function (uri) {
+      let query = this.req.options.search;
+      query = query.substring(1);
+      let locale = undefined;
+      query = qs.parse(query);
+      if (query.locale) {
+        locale = query.locale;
+      }
+      const match = uri.match(/\/v3\/content_types\/([a-zA-Z0-9_]+)\/entries/);
+      return getEntries(match[1], locale);
+    });
+
+  // Mock get locale
+  nock(testApiUrl)
+    .persist()
+    .get(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries\/[a-zA-Z0-9_]+\/locale/)
+    .query({
+      deleted: false,
+    })
+    .reply(200, () => {
+      return {
+        locales: [
+          {
+            code: "en-in",
+            localized: true,
+          },
+          {
+            code: "en-us",
+          },
+        ],
+      };
+    });
+
+  // Mock single entry fetch
+  nock(testApiUrl)
+    .persist()
+    .get(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries\/[a-zA-Z0-9_]+$/)
+    .query(true)
+    .reply(200, (uri) => {
+      const match = uri.match(
+        /\/v3\/content_types\/([a-zA-Z0-9_]+)\/entries\/([a-zA-Z0-9_]+)/
+      );
+      return getEntry(match[1], match[2]);
+    });
+
+  // Mock entry update
+  nock(testApiUrl)
+    .persist()
+    .put(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries\/[a-zA-Z0-9_]+/)
+    .reply((uri, body) => {
+      const match = uri.match(
+        /\/v3\/content_types\/([a-zA-Z0-9_]+)\/entries\/([a-zA-Z0-9_]+)\?locale=([a-zA-Z0-9_-]+)/
+      );
+      if (!match) return [400, { error_message: "Invalid URL format" }];
+
+      const responseModified = cloneDeep(omitDeep(body, ["uid"]));
+      const expectedResponse = omitDeep(
+        getExpectedOutput(match[1], match[2], match[3]),
+        ["uid"]
+      );
+
+      if (isEqual(responseModified, expectedResponse)) {
+        return [
+          200,
+          {
+            notice: "Entry updated successfully.",
+            entry: {},
+          },
+        ];
+      }
+      return [
+        400,
+        {
+          notice: "Update Failed.",
+          error_message: "Entry update failed.",
+          entry: {},
+        },
+      ];
+    });
+}
 
 describe("Migration Config validation", () => {
   const getTokenCallback = sinon.stub();
@@ -169,7 +289,7 @@ describe("Content Type with Single RTE Field of Single Type", function () {
     // Restore all stubs/nocks from previous tests to avoid cross-test pollution
     nock.cleanAll();
 
-    // Stub cmaAPIUrl to avoid region configuration requirement  
+    // Stub cmaAPIUrl to avoid region configuration requirement
     sinon.stub(command, "cmaAPIUrl").value(testApiUrl);
 
     // mock content type
@@ -684,20 +804,132 @@ describe("Global Field Migration", () => {
     // Stub cmaAPIUrl to avoid region configuration requirement
     sinon.stub(command, "cmaAPIUrl").value(testApiUrl);
 
-    nock(testApiUrl, {
-      reqheaders: {
-        api_key: token.apiKey,
-        authorization: token.token,
-      },
-    })
+    // Mock global field fetch
+    nock(testApiUrl)
       .persist()
-      .get(/\/v3\/global_fields\/([a-zA-Z_])*/)
+      .get(/\/v3\/global_fields\/[a-zA-Z0-9_]+/)
       .query({
         include_content_types: true,
       })
       .reply((uri) => {
-        const match = uri.match(/\/v3\/global_fields\/(([a-zA-Z_])*)/);
+        const match = uri.match(/\/v3\/global_fields\/([a-zA-Z0-9_]+)/);
         return getGlobalField(match[1]);
+      });
+
+    // Mock content type fetch (needed when processing global field references)
+    nock(testApiUrl)
+      .persist()
+      .get(/\/v3\/content_types\/[a-zA-Z0-9_]+$/)
+      .query({
+        include_global_field_schema: true,
+      })
+      .reply((uri) => {
+        const match = uri.match(/\/v3\/content_types\/([a-zA-Z0-9_]+)/);
+        return getContentType(match[1]);
+      });
+
+    // Mock entries UID list
+    nock(testApiUrl)
+      .persist()
+      .get(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries/)
+      .query({
+        include_count: true,
+        skip: 0,
+        limit: 100,
+        "only[Base][]": "uid",
+      })
+      .reply(200, (uri) => {
+        const match = uri.match(
+          /\/v3\/content_types\/([a-zA-Z0-9_]+)\/entries/
+        );
+        return getEntriesOnlyUID(match[1]);
+      });
+
+    // Mock entries fetch with locale support
+    nock(testApiUrl)
+      .persist()
+      .get(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries/)
+      .query(true)
+      .reply(200, function (uri) {
+        let query = this.req.options.search;
+        query = query.substring(1);
+        let locale = undefined;
+        query = qs.parse(query);
+        if (query.locale) {
+          locale = query.locale;
+        }
+        const match = uri.match(
+          /\/v3\/content_types\/([a-zA-Z0-9_]+)\/entries/
+        );
+        return getEntries(match[1], locale);
+      });
+
+    // Mock get locale
+    nock(testApiUrl)
+      .persist()
+      .get(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries\/[a-zA-Z0-9_]+\/locale/)
+      .query({
+        deleted: false,
+      })
+      .reply(200, () => {
+        return {
+          locales: [
+            {
+              code: "en-in",
+              localized: true,
+            },
+            {
+              code: "en-us",
+            },
+          ],
+        };
+      });
+
+    // Mock single entry fetch
+    nock(testApiUrl)
+      .persist()
+      .get(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries\/[a-zA-Z0-9_]+$/)
+      .query(true)
+      .reply(200, (uri) => {
+        const match = uri.match(
+          /\/v3\/content_types\/([a-zA-Z0-9_]+)\/entries\/([a-zA-Z0-9_]+)/
+        );
+        return getEntry(match[1], match[3]);
+      });
+
+    // Mock entry update
+    nock(testApiUrl)
+      .persist()
+      .put(/\/v3\/content_types\/[a-zA-Z0-9_]+\/entries\/[a-zA-Z0-9_]+/)
+      .reply((uri, body) => {
+        const match = uri.match(
+          /\/v3\/content_types\/([a-zA-Z0-9_]+)\/entries\/([a-zA-Z0-9_]+)\?locale=([a-zA-Z0-9_-]+)/
+        );
+        if (!match) return [400, { error_message: "Invalid URL format" }];
+
+        const responseModified = cloneDeep(omitDeep(body, ["uid"]));
+        const expectedResponse = omitDeep(
+          getExpectedOutput(match[1], match[2], match[3]),
+          ["uid"]
+        );
+
+        if (isEqual(responseModified, expectedResponse)) {
+          return [
+            200,
+            {
+              notice: "Entry updated successfully.",
+              entry: {},
+            },
+          ];
+        }
+        return [
+          400,
+          {
+            notice: "Update Failed.",
+            error_message: "Entry update failed.",
+            entry: {},
+          },
+        ];
       });
   });
 
@@ -867,6 +1099,12 @@ describe("Global Field Migration", () => {
 });
 
 describe("Content Type with single rte of multiple type", () => {
+  let testApiUrl = "https://api.contentstack.io";
+
+  beforeEach(() => {
+    setupCommonNockMocks(testApiUrl);
+  });
+
   const getTokenCallback = sinon.stub();
   getTokenCallback.withArgs("test1").returns({
     token: "testManagementToken",
@@ -892,6 +1130,12 @@ describe("Content Type with single rte of multiple type", () => {
 });
 
 describe("Content Type with Single RTE inside modular block", () => {
+  let testApiUrl = "https://api.contentstack.io";
+
+  beforeEach(() => {
+    setupCommonNockMocks(testApiUrl);
+  });
+
   const getTokenCallback = sinon.stub();
   getTokenCallback.withArgs("test1").returns({
     token: "testManagementToken",
@@ -925,6 +1169,12 @@ describe("Content Type with Single RTE inside modular block", () => {
 });
 
 describe("Content Type with Single RTE of type multiple inside group", () => {
+  let testApiUrl = "https://api.contentstack.io";
+
+  beforeEach(() => {
+    setupCommonNockMocks(testApiUrl);
+  });
+
   const getTokenCallback = sinon.stub();
   getTokenCallback.withArgs("test1").returns({
     token: "testManagementToken",
@@ -958,6 +1208,12 @@ describe("Content Type with Single RTE of type multiple inside group", () => {
 });
 
 describe("Content Type with Single RTE inside group of type multiple", () => {
+  let testApiUrl = "https://api.contentstack.io";
+
+  beforeEach(() => {
+    setupCommonNockMocks(testApiUrl);
+  });
+
   const getTokenCallback = sinon.stub();
   getTokenCallback.withArgs("test1").returns({
     token: "testManagementToken",
@@ -991,6 +1247,12 @@ describe("Content Type with Single RTE inside group of type multiple", () => {
 });
 
 describe("Content Type with multiple file field", () => {
+  let testApiUrl = "https://api.contentstack.io";
+
+  beforeEach(() => {
+    setupCommonNockMocks(testApiUrl);
+  });
+
   const getTokenCallback = sinon.stub();
   getTokenCallback.withArgs("test1").returns({
     token: "testManagementToken",
