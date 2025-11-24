@@ -20,15 +20,16 @@ const { command } = require("../../src/lib/util");
 
 describe("Migration Config validation", () => {
   const getTokenCallback = sinon.stub();
+
+  getTokenCallback.withArgs("test1").returns({
+    token: "testManagementToken",
+    apiKey: "testApiKey",
+    type: "management",
+  });
+
   getTokenCallback
-    .withArgs("test1")
-    .returns({
-      token: "testManagementToken",
-      apiKey: "testApiKey",
-      type: "management",
-    })
     .withArgs("invalidAlias")
-    .throws("Token with alias 'invalidAlias' was not found");
+    .throws(new Error("Token with alias 'invalidAlias' was not found"));
 
   fancy
     .stub(cliux, "confirm", () => false)
@@ -130,6 +131,10 @@ describe("Migration Config validation", () => {
         ],
         { root: process.cwd() }
       );
+
+      // 1) For debugging, you can temporarily log:
+      // console.log('ACTUAL ERROR:', error.message);
+
       expect(error.message).to.contain(
         "Invalid alias provided for the management token."
       );
