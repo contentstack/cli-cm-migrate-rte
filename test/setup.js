@@ -1,26 +1,26 @@
-/**
- * Test setup file for proper stub cleanup
- * This ensures sinon stubs are properly restored between tests
- */
+// test/setup.js
 
-const sinon = require('sinon');
-
-// Set default region for tests to avoid "Region not configured" error
-process.env.CSDX_REGION = 'NA';
-
-// Global afterEach to restore all stubs after each test
-afterEach(function() {
-  // Restore all sinon stubs/spies/mocks
-  sinon.restore();
+// Make unhandled promise rejections fail tests loudly
+process.on("unhandledRejection", (reason) => {
+  // eslint-disable-next-line no-console
+  console.error("UNHANDLED REJECTION in tests:", reason);
+  // Non-zero exit so CI fails explicitly
+  process.exitCode = 1;
 });
 
-// Optionally, add a beforeEach for consistency
-beforeEach(function() {
-  // This ensures we start with a clean slate
-  sinon.restore();
+// Make uncaught exceptions visible
+process.on("uncaughtException", (err) => {
+  // eslint-disable-next-line no-console
+  console.error("UNCAUGHT EXCEPTION in tests:", err);
+  process.exitCode = 1;
 });
 
-module.exports = {
-  // Export any shared test utilities here if needed
-};
-
+// Optional: disable external HTTP calls except via nock
+try {
+  const nock = require("nock");
+  nock.disableNetConnect();
+  // Allow localhost if you ever need it:
+  // nock.enableNetConnect("127.0.0.1");
+} catch (e) {
+  // if nock isn't loaded here, just ignore
+}
