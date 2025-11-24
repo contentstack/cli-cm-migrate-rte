@@ -132,8 +132,8 @@ describe("Migration Config validation", () => {
         { root: process.cwd() }
       );
 
-      // 1) For debugging, you can temporarily log:
-      // console.log('ACTUAL ERROR:', error.message);
+      // Temporarily, if you want to verify what you actually get:
+      console.log('ACTUAL ERROR:', error);
 
       expect(error.message).to.contain(
         "Invalid alias provided for the management token."
