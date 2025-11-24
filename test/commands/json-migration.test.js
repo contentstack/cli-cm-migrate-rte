@@ -167,11 +167,10 @@ describe("Content Type with Single RTE Field of Single Type", function () {
 
   beforeEach(() => {
     // Restore all stubs/nocks from previous tests to avoid cross-test pollution
-    sinon.restore();
     nock.cleanAll();
 
-    // Stub cmaAPIUrl to avoid region configuration requirement
-    sinon.stub(command, "cmaAPIUrl").get(() => testApiUrl);
+    // Stub cmaAPIUrl to avoid region configuration requirement  
+    sinon.stub(command, "cmaAPIUrl").value(testApiUrl);
 
     // mock content type
     nock(testApiUrl, {
@@ -680,11 +679,10 @@ describe("Global Field Migration", () => {
   let testApiUrl = "https://api.contentstack.io";
 
   beforeEach(() => {
-    sinon.restore();
     nock.cleanAll();
 
     // Stub cmaAPIUrl to avoid region configuration requirement
-    sinon.stub(command, "cmaAPIUrl").get(() => testApiUrl);
+    sinon.stub(command, "cmaAPIUrl").value(testApiUrl);
 
     nock(testApiUrl, {
       reqheaders: {
