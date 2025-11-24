@@ -1,5 +1,3 @@
-/* eslint-disable no-undef */
-/* eslint-disable @typescript-eslint/no-var-requires */
 const { runCommand } = require("@oclif/test");
 const sinon = require("sinon");
 const qs = require("querystring");
@@ -19,13 +17,6 @@ const {
 const omitDeep = require("omit-deep-lodash");
 const { isEqual, cloneDeep } = require("lodash");
 const { command } = require("../../src/lib/util");
-
-/**
- * NOTE:
- * - All getTokenCallback stubs are scoped to their own describe blocks.
- * - nock handlers avoid arrow + `this` usage where we need request context.
- * - Fixed the `match2` typo in single entry fetch mock.
- */
 
 describe("Migration Config validation", () => {
   const getTokenCallback = sinon.stub();
@@ -162,15 +153,10 @@ describe("Migration Config validation", () => {
       );
     });
 });
-
 describe("Content Type with Single RTE Field of Single Type", function () {
   this.timeout(1000000);
-  let token;
-
+  let token = getToken("test1");
   beforeEach(() => {
-    token = getToken("test1");
-
-    // mock content type schema
     nock(`${command.cmaAPIUrl}`, {
       reqheaders: {
         api_key: token.apiKey,
@@ -182,12 +168,10 @@ describe("Content Type with Single RTE Field of Single Type", function () {
       .query({
         include_global_field_schema: true,
       })
-      .reply(function (uri) {
-        const match = uri.match(/\/v3\/content_types\/((\w)*)/);
+      .reply((uri) => {
+        var match = uri.match(/\/v3\/content_types\/((\w)*)/);
         return getContentType(match[1]);
       });
-
-    // mock get entries (uids only)
     nock(`${command.cmaAPIUrl}`, {
       reqheaders: {
         api_key: token.apiKey,
@@ -202,12 +186,11 @@ describe("Content Type with Single RTE Field of Single Type", function () {
         limit: 100,
         "only[Base][]": "uid",
       })
-      .reply(200, function (uri) {
-        const match = uri.match(/\/v3\/content_types\/((\w)*)\/entries/);
+      .reply(200, (uri) => {
+        var match = uri.match(/\/v3\/content_types\/((\w)*)\/entries/);
         return getEntriesOnlyUID(match[1]);
       });
 
-    // mock get entries with full data
     nock(`${command.cmaAPIUrl}`, {
       reqheaders: {
         api_key: token.apiKey,
@@ -218,17 +201,17 @@ describe("Content Type with Single RTE Field of Single Type", function () {
       .get(/\/v3\/content_types\/((\w)*)\/entries/)
       .query(true)
       .reply(200, function (uri) {
-        let queryString = this.req.options.search || "";
-        if (queryString.startsWith("?")) {
-          queryString = queryString.substring(1);
+        let query = this.req.options.search;
+        query = query.substring(1);
+        let locale = undefined;
+        query = qs.parse(query);
+        if (query.locale) {
+          locale = query.locale;
         }
-        const query = qs.parse(queryString);
-        const locale = query.locale;
-        const match = uri.match(/\/v3\/content_types\/((\w)*)\/entries/);
+        var match = uri.match(/\/v3\/content_types\/((\w)*)\/entries/);
         return getEntries(match[1], locale);
       });
-
-    // mock get locales for entry
+    // mock get locale
     nock(`${command.cmaAPIUrl}`, {
       reqheaders: {
         api_key: token.apiKey,
@@ -264,28 +247,16 @@ describe("Content Type with Single RTE Field of Single Type", function () {
       .persist()
       .get(/\/v3\/content_types\/((\w)*)\/entries\/((\w)*)/)
       .query(true)
-      .reply(200, function (uri) {
-        let queryString = this.req.options.search || "";
-        if (queryString.startsWith("?")) {
-          queryString = queryString.substring(1);
-        }
-        const query = qs.parse(queryString);
-        const match = uri.match(
-          /\/v3\/content_types\/((\w)*)\/entries\/((\w)*)/
-        );
-
-        if (!match) {
-          return {};
-        }
-
+      .reply(200, (uri) => {
+        const query = this.queries;
+        let match = uri.match(/\/v3\/content_types\/((\w)*)\/entries\/((\w)*)/);
         if (query.locale) {
           return getEntry(match[1], match[3], query.locale);
+        } else {
+          return getEntry(match2[1], match2[3]);
         }
-
-        return getEntry(match[1], match[3]);
       });
 
-    // mock update entry
     nock(`${command.cmaAPIUrl}`, {
       reqheaders: {
         api_key: token.apiKey,
@@ -294,34 +265,16 @@ describe("Content Type with Single RTE Field of Single Type", function () {
     })
       .persist()
       .put(/\/v3\/content_types\/((\w)*)\/entries/)
-      .query(true)
-      .reply(function (uri, body) {
-        const match = uri.match(
+      .reply((uri, body) => {
+        let match = uri.match(
           /\/v3\/content_types\/((\w)*)\/entries\/((\w)*)\?locale=((\w|-)*)/
         );
-
-        if (!match) {
-          return [
-            400,
-            {
-              notice: "Update Failed.",
-              error_message: "Entry update failed.",
-              entry: {},
-            },
-          ];
-        }
-
-        const contentTypeUid = match[1];
-        const entryUid = match[3];
-        const locale = match[5];
-
-        const responseModified = cloneDeep(omitDeep(body, ["uid"]));
+        let responseModified = cloneDeep(omitDeep(body, ["uid"]));
         let expectedResponse = omitDeep(
-          getExpectedOutput(contentTypeUid, entryUid, locale),
+          getExpectedOutput(match[1], match[3], match[5]),
           ["uid"]
         );
         expectedResponse = cloneDeep(expectedResponse);
-
         if (isEqual(responseModified, expectedResponse)) {
           return [
             200,
@@ -331,7 +284,6 @@ describe("Content Type with Single RTE Field of Single Type", function () {
             },
           ];
         }
-
         return [
           400,
           {
@@ -342,8 +294,6 @@ describe("Content Type with Single RTE Field of Single Type", function () {
         ];
       });
   });
-
-  // local getTokenCallback for this describe
   const getTokenCallback = sinon.stub();
   getTokenCallback.withArgs("test1").returns({
     token: "testManagementToken",
@@ -398,7 +348,6 @@ describe("Content Type with Single RTE Field of Single Type", function () {
       );
       expect(stdout).to.contain("Updated 1 Content Type(s) and 3 Entrie(s)");
     });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -446,7 +395,6 @@ describe("Content Type with Single RTE Field of Single Type", function () {
       );
       expect(stdout).to.contain("Updated 1 Content Type(s) and 1 Entrie(s)");
     });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -524,7 +472,6 @@ describe("Content Type with Single RTE Field of Single Type", function () {
         "The specified path to supercharged_rte JSON RTE does not exist."
       );
     });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -672,7 +619,7 @@ describe("Content Type with Single RTE Field of Single Type", function () {
         { root: process.cwd() }
       );
       expect(stdout).to.contain(
-        'Faced issue while migrating some entrie(s) for "contenttypewithentryupdateerror" Content-type in "en-us" locale,"blta9b16ac2827c54ed, blta9b16ac2827c54e1"'
+        `Faced issue while migrating some entrie(s) for "contenttypewithentryupdateerror" Content-type in "en-us" locale,"blta9b16ac2827c54ed, blta9b16ac2827c54e1"`
       );
     });
 
@@ -698,13 +645,9 @@ describe("Content Type with Single RTE Field of Single Type", function () {
       }
     );
 });
-
 describe("Global Field Migration", () => {
-  let token;
-
+  let token = getToken("test1");
   beforeEach(() => {
-    token = getToken("test1");
-
     nock(`${command.cmaAPIUrl}`, {
       reqheaders: {
         api_key: token.apiKey,
@@ -716,8 +659,8 @@ describe("Global Field Migration", () => {
       .query({
         include_content_types: true,
       })
-      .reply(function (uri) {
-        const match = uri.match(/\/v3\/global_fields\/(([a-zA-Z_])*)/);
+      .reply((uri) => {
+        var match = uri.match(/\/v3\/global_fields\/(([a-zA-Z_])*)/);
         return getGlobalField(match[1]);
       });
   });
@@ -728,7 +671,6 @@ describe("Global Field Migration", () => {
     apiKey: "testApiKey",
     type: "management",
   });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -894,7 +836,6 @@ describe("Content Type with single rte of multiple type", () => {
     apiKey: "testApiKey",
     type: "management",
   });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -919,7 +860,6 @@ describe("Content Type with Single RTE inside modular block", () => {
     apiKey: "testApiKey",
     type: "management",
   });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -952,7 +892,6 @@ describe("Content Type with Single RTE of type multiple inside group", () => {
     apiKey: "testApiKey",
     type: "management",
   });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -985,7 +924,6 @@ describe("Content Type with Single RTE inside group of type multiple", () => {
     apiKey: "testApiKey",
     type: "management",
   });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -1011,6 +949,7 @@ describe("Content Type with Single RTE inside group of type multiple", () => {
     });
 });
 
+// Check this one
 describe("Content Type with multiple file field", () => {
   const getTokenCallback = sinon.stub();
   getTokenCallback.withArgs("test1").returns({
@@ -1018,7 +957,6 @@ describe("Content Type with multiple file field", () => {
     apiKey: "testApiKey",
     type: "management",
   });
-
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
@@ -1055,7 +993,7 @@ describe("Migration with old flags and command", () => {
   fancy
     .stub(cliux, "confirm", () => "yes")
     .stub(command, "getToken", getTokenCallback)
-    .it("execute using config file w/o locale", async () => {
+    .it("execute using config file w/o locale", async (ctx) => {
       const { stdout } = await runCommand(
         [
           "cm:migrate-rte",
@@ -1066,7 +1004,7 @@ describe("Migration with old flags and command", () => {
         { root: process.cwd() }
       );
       expect(stdout).to.contain(
-        "WARNING!!! You're using the old (soon to be deprecated) Contentstack CLI flags (-p, --configPath). We recommend you to use the updated flags (-c, --config-path)."
+        `WARNING!!! You're using the old (soon to be deprecated) Contentstack CLI flags (-p, --configPath). We recommend you to use the updated flags (-c, --config-path).`
       );
     });
 
@@ -1092,13 +1030,13 @@ describe("Migration with old flags and command", () => {
       );
 
       expect(stdout).to.contain(
-        "WARNING!!! You're using the old (soon to be deprecated) Contentstack CLI flags (-c, --content_type). We recommend you to use the updated flags (--content-type)."
+        `WARNING!!! You're using the old (soon to be deprecated) Contentstack CLI flags (-c, --content_type). We recommend you to use the updated flags (--content-type).`
       );
       expect(stdout).to.contain(
-        "WARNING!!! You're using the old (soon to be deprecated) Contentstack CLI flags (-h, --htmlPath). We recommend you to use the updated flags (--html-path)"
+        `WARNING!!! You're using the old (soon to be deprecated) Contentstack CLI flags (-h, --htmlPath). We recommend you to use the updated flags (--html-path)`
       );
       expect(stdout).to.contain(
-        "WARNING!!! You're using the old (soon to be deprecated) Contentstack CLI flags (-j, --jsonPath). We recommend you to use the updated flags (--json-path)."
+        `WARNING!!! You're using the old (soon to be deprecated) Contentstack CLI flags (-j, --jsonPath). We recommend you to use the updated flags (--json-path).`
       );
     });
 });
