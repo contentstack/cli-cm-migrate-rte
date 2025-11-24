@@ -114,7 +114,7 @@ describe("Migration Config validation", () => {
   fancy
     .stub(cliux, "confirm", () => true)
     .stub(command, "getToken", getTokenCallback)
-    .it.("throw error on invalidAlias", async () => {
+    .it("throw error on invalidAlias", async () => {
       const { error } = await runCommand(
         [
           "cm:entries:migrate-html-rte",
