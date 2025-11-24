@@ -1,13 +1,8 @@
 {
   "all": true,
-  "include": [
-    "commands/**/*.js",
-    "lib/**/*.js"
-  ],
-  "exclude": [
-    "test/**",
-    "node_modules/**"
-  ],
+  "extension": [".js"],
+  "include": ["src/**/*.js"],
+  "exclude": ["test/**", "node_modules/**"],
   "reporter": ["text"],
   "check-coverage": true,
   "statements": 80,
