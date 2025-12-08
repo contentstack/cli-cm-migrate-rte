@@ -1,9 +1,7 @@
 {
   "commands": {
     "cm:entries:migrate-html-rte": {
-      "aliases": [
-        "cm:migrate-rte"
-      ],
+      "aliases": [],
       "args": {},
       "description": "Migration script to migrate content from HTML RTE to JSON RTE",
       "examples": [
@@ -125,49 +123,6 @@
           "hasDynamicHelp": false,
           "multiple": false,
           "type": "option"
-        },
-        "configPath": {
-          "char": "p",
-          "description": "Path to the config file",
-          "hidden": true,
-          "name": "configPath",
-          "hasDynamicHelp": false,
-          "multiple": false,
-          "type": "option"
-        },
-        "content_type": {
-          "description": "The content-type from which entries need to be migrated",
-          "hidden": true,
-          "name": "content_type",
-          "hasDynamicHelp": false,
-          "multiple": false,
-          "type": "option"
-        },
-        "isGlobalField": {
-          "char": "g",
-          "description": "Indicates that the current content type is a global field (default: false)",
-          "hidden": true,
-          "name": "isGlobalField",
-          "allowNo": false,
-          "type": "boolean"
-        },
-        "htmlPath": {
-          "char": "h",
-          "description": "Provide the path of HTML RTE to migrate",
-          "hidden": true,
-          "name": "htmlPath",
-          "hasDynamicHelp": false,
-          "multiple": false,
-          "type": "option"
-        },
-        "jsonPath": {
-          "char": "j",
-          "description": "Provide the path of JSON RTE to migrate",
-          "hidden": true,
-          "name": "jsonPath",
-          "hasDynamicHelp": false,
-          "multiple": false,
-          "type": "option"
         }
       },
       "hasDynamicHelp": false,
@@ -187,5 +142,5 @@
       ]
     }
   },
-  "version": "1.6.2"
+  "version": "2.0.0-beta.1"
 }
