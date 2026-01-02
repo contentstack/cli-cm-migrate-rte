@@ -1,0 +1,4 @@
+fileignoreconfig:
+  - filename: src/commands/cm/entries/migrate-html-rte.js
+    checksum: ac26bed39991bc62a061413c84ef4bc0e48a114816c6d31575f81950e030f5c2
+version: "1.0"
