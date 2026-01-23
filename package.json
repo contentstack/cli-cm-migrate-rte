@@ -16,7 +16,7 @@
     "collapse-whitespace": "^1.1.7",
     "jsdom": "^20.0.3",
     "jsonschema": "^1.5.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "omit-deep-lodash": "^1.1.7"
   },
   "devDependencies": {
