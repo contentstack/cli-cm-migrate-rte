@@ -14,7 +14,7 @@
     "@oclif/plugin-help": "^6.2.28",
     "chalk": "^4.1.2",
     "collapse-whitespace": "^1.1.7",
-    "jsdom": "^20.0.3",
+    "jsdom": "^23.0.0",
     "jsonschema": "^1.5.0",
     "lodash": "^4.17.23",
     "omit-deep-lodash": "^1.1.7"
@@ -30,10 +30,11 @@
     "nyc": "^15.1.0",
     "oclif": "^4.17.46",
     "querystring": "^0.2.1",
-    "sinon": "^21.0.1"
+    "sinon": "^21.0.1",
+    "husky": "^9.1.7"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "/npm-shrinkwrap.json",
@@ -58,6 +59,7 @@
     "url": "https://github.com/contentstack/cli-cm-migrate-rte.git"
   },
   "scripts": {
+    "prepare": "npx husky && chmod +x .husky/pre-commit",
     "postpack": "rm -f oclif.manifest.json",
     "prepack": "oclif manifest && oclif readme",
     "test": "nyc --check-coverage=false mocha --require test/setup.js --forbid-only \"test/**/*.test.js\"",
