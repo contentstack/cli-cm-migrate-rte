@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: package-lock.json
-  checksum: 855eea99bbc702cb9729f3f9a0bf303ef37afdee145053f3f14a577e4cf43bad
+  checksum: 61b86c76baec9fe548f30fc05455ee086188f3bdf57127d662ad20f9848116c2
 - filename: .husky/pre-commit
   checksum: 7a12030ddfea18d6f85edc25f1721fb2009df00fdd42bab66b05de25ab3e32b2
 version: ""
