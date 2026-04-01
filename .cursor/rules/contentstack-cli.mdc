@@ -1,0 +1,40 @@
+---
+description: "HTML→JSON RTE migration plugin: CLI utilities, migration flow, and Management API habits"
+globs:
+  - "src/lib/**/*.js"
+  - "src/lib/**/*.json"
+alwaysApply: false
+---
+
+# Contentstack CLI — migrate HTML RTE
+
+This package is **`@contentstack/cli-cm-migrate-rte`**. Business logic lives in **`src/lib/util/index.js`** (there is no `src/core/` or `src/services/` layer).
+
+## Stack and auth
+
+- Use **`@contentstack/cli-utilities`**: `managementSDKClient`, `cliux`, `flags`, `pathValidator`, `isAuthenticated`, `doesBranchExist`, etc.
+- Resolve credentials like **`migrate-html-rte.js`**: config **`alias`** (management token via `getToken`) or **`stack-api-key`** (requires logged-in CLI session per `getStack`).
+- Pass **`this.cmaHost`** from the command into stack options as **`host`**.
+- **Never** log or persist secrets (API keys, management tokens).
+
+## Migration orchestration
+
+1. **`normalizeFlags`** — maps deprecated camelCase flag names to kebab-case.
+2. **`getConfig`** — JSON file via **`--config-path`** / `pathValidator`, or inline paths from **`--html-path`** / **`--json-path`**; validated with **jsonschema** against **`config_schema.json`**; optional **`cliux.confirm`** unless **`--yes`**.
+3. **`getStack`** — `managementSDKClient` with `application: json-rte-migration/<version>`, branch check via **`doesBranchExist`**.
+4. **`updateSingleContentTypeEntries`** or **`updateContentTypeForGlobalField`** — fetch content type / global field, validate RTE paths (**`isPathValid`** / **`traverseSchemaForField`**), batch entries with **`delay`** and **`batch-limit`**, convert HTML with **jsdom** + **`collapse-whitespace`** + **`htmlToJson`** from **`@contentstack/json-rte-serializer`**, update entries; track **`errorEntriesUid`** on repeated update failures.
+
+## Paths and schema
+
+- **`paths`** entries map **`from`** (HTML RTE uid path) → **`to`** (JSON RTE uid path); support groups, **blocks**, **global_field**, and **experience_container** traversal as in **`setEntryData`** / **`isPathValid`**.
+- HTML and JSON RTE must sit at the **same depth**; single/multiple cardinality must **match** between source and target fields.
+
+## API usage
+
+- Batching uses entry **query** + **find** with **`include_count`**, **skip** / **limit**, optional **locale** filter.
+- Local **retry** loops exist for batch fetch and **`handleEntryUpdate`** (transient failures); when adding new Management API calls, respect **rate limits** and handle **429** / transient errors consistently with existing patterns.
+- **Mock all** HTTP / SDK usage in tests (**nock**, **sinon**); no live stack calls in unit tests.
+
+## Not in this plugin
+
+- This is **not** query-based export: there is no **`QueryExporter`**. Do not assume **`@contentstack/cli-cm-export`** export pipelines unless you are integrating something explicitly shared.
