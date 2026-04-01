@@ -1,0 +1,68 @@
+---
+description: "Testing patterns and TDD workflow"
+globs:
+  - "test/**/*.js"
+  - "**/*.test.js"
+alwaysApply: true
+---
+
+# Testing Standards
+
+## TDD workflow
+
+1. For behavior changes, prefer a failing test first
+2. Minimal code to pass
+3. Refactor while keeping tests green
+
+Pure refactors and docs-only changes may skip new tests when behavior is unchanged.
+
+## Coverage
+
+- **~80%** (lines, branches, functions) is an **aspirational** goal, not enforced as a hard gate here
+- Test both success and failure paths
+- Mock all external dependencies
+
+## Test patterns
+
+```javascript
+const { expect } = require("chai");
+const sinon = require("sinon");
+
+describe("[ModuleName]", () => {
+  beforeEach(() => {
+    sinon.stub(SomeClient.prototype, "fetch").resolves(mockData);
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  it("should [expected behavior] when [condition]", async () => {
+    const input = { /* test data */ };
+    const result = await moduleUnderTest(input);
+    expect(result).to.deep.equal(expectedOutput);
+  });
+});
+```
+
+## Mocking standards
+
+- Use **sinon** for stubs/spies; use **nock** for HTTP where the tests already do
+- Never make real API calls in tests
+- Mock at module boundaries (**`managementSDKClient`**, **`command.cmaAPIUrl`**, etc.), not irrelevant internals
+
+## Layout
+
+- Tests live under **`test/**/*.test.js`** (Mocha), loaded via **`test/setup.js`**
+- JSON fixtures under **`test/dummy/`**; shared helpers under **`test/utils/`**
+
+## Common mock patterns
+
+```javascript
+const nock = require("nock");
+const sinon = require("sinon");
+const { managementSDKClient } = require("@contentstack/cli-utilities");
+
+sinon.stub(managementSDKClient, "call").resolves(mockClient);
+nock("https://example.cma.url").get(/\/v3\//).reply(200, mockPayload);
+```

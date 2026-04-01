@@ -1,0 +1,45 @@
+---
+description: "OCLIF / Contentstack command patterns for migrate-html-rte"
+globs:
+  - "src/commands/**/*.js"
+  - "test/commands/**/*.js"
+alwaysApply: false
+---
+
+# Command standards (`cm:entries:migrate-html-rte`)
+
+This plugin uses **`Command`** from **`@contentstack/cli-command`** and **`flags`** from **`@contentstack/cli-utilities`**. Follow **`src/commands/cm/entries/migrate-html-rte.js`** as the source of truth.
+
+## Structure
+
+```javascript
+const { Command } = require("@contentstack/cli-command");
+const { flags } = require("@contentstack/cli-utilities");
+const { /* getStack, getConfig, ... */ } = require("../../../lib/util");
+
+class JsonMigrationCommand extends Command {
+  async run() {
+    const { flags: migrateRteFlags } = await this.parse(JsonMigrationCommand);
+    // normalizeFlags → getConfig → getStack → updateSingleContentTypeEntries / updateContentTypeForGlobalField
+  }
+}
+
+JsonMigrationCommand.description = "...";
+JsonMigrationCommand.flags = { /* flags.string / flags.boolean / flags.integer */ };
+JsonMigrationCommand.examples = [ "...", "csdx cm:entries:migrate-html-rte ..." ];
+
+module.exports = JsonMigrationCommand;
+```
+
+## Practices
+
+- **Validate early**: ensure **`paths`** (from config or flags) exist; stack auth via alias or stack-api-key as documented.
+- **Delegate**: keep **`run()`** thin; migration, batching, and HTML→JSON conversion stay in **`src/lib/util/index.js`**.
+- **User feedback**: success summary and **`errorEntriesUid`** reporting already use **chalk**; keep messages actionable.
+- **Errors**: use **`this.error(error.message, { exit: 2 })`** for command-level failures.
+
+## Flags
+
+- Define flags with **`flags.string`**, **`flags.boolean`**, **`flags.integer`**, etc., on the **class** (`JsonMigrationCommand.flags`).
+- Use **`dependsOn`** where flags are coupled (e.g. **`html-path`** depends on **`json-path`**).
+- Prefer kebab-case flag names; **`normalizeFlags`** in util accepts legacy camelCase keys for backward compatibility.
