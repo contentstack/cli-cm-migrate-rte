@@ -1,6 +1,6 @@
 fileignoreconfig:
 - filename: package-lock.json
-  checksum: dcbdc2bb8ecdfc2768a0acad70ac3658d0dedfe7394ec9b2522ed1d2dfd02d83
+  checksum: 1ed4be8f8e1d7bb4de9a726bc57a80a1ded12c679fd629a84e965d9525757d9c
 - filename: .husky/pre-commit
   checksum: 7a12030ddfea18d6f85edc25f1721fb2009df00fdd42bab66b05de25ab3e32b2
 - filename: .github/workflows/check-version-bump.yml
